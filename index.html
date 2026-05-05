@@ -143,7 +143,7 @@
             font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 900;
             text-transform: uppercase; letter-spacing: 3px;
             animation: scrollText 20s linear infinite;
-            pointer-events: none; /* Prevents text from blocking cursor hover */
+            pointer-events: none;
         }
         .marquee-content span.dot { font-size: 1rem; opacity: 0.5; }
         @keyframes scrollText { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -180,11 +180,10 @@
         .video-card {
             background: rgba(0,0,0,0.5); border-radius: var(--radius); overflow: hidden; 
             border: 1px solid var(--glass-border); box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            padding: 0; /* Override tilt card padding for flush video */
+            padding: 0; 
             display: flex; flex-direction: column;
         }
         
-        /* Aspect Ratio for perfect YouTube embeds */
         .video-container {
             position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */
             background: #000;
@@ -247,13 +246,47 @@
         }
         .btn-submit:hover { background: var(--accent); color: var(--bg-deep); }
 
+        .reveal { opacity: 0; transform: translateY(60px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        /* =========================================
+           10. MOBILE PERFORMANCE OPTIMIZATIONS
+           ========================================= */
         @media (max-width: 900px) {
             .contact-container { grid-template-columns: 1fr; }
             .btn-fiverr { font-size: 1.2rem; padding: 20px 30px; }
         }
-        
-        .reveal { opacity: 0; transform: translateY(60px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            /* 1. Disable custom cursor entirely */
+            #cursor, #cursor-ring {
+                display: none !important;
+            }
+            
+            /* 2. Restore default touch interactions */
+            * {
+                cursor: auto !important;
+            }
+
+            /* 3. Reduce expensive blur calculations */
+            nav, .tilt-card, .contact-container, .hero-photo-ring {
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+            }
+            
+            /* 4. Disable 3D transforms on mobile to save battery and stop jitter */
+            .tilt-card, .hero-photo-wrap {
+                transform: none !important;
+                transition: none !important;
+                animation: none !important;
+            }
+
+            /* Fix navigation spacing for mobile */
+            .nav-links {
+                display: none; /* Hide standard links on mobile to prevent overflow, consider a hamburger menu later */
+            }
+            nav { justify-content: center; }
+        }
     </style>
 </head>
 <body>
@@ -389,81 +422,98 @@
             }, 1000);
         });
 
-        // 2. Custom Cursor Base
-        const cursor = document.getElementById('cursor');
-        const cursorRing = document.getElementById('cursor-ring');
-        const interactives = document.querySelectorAll('.interactive, a, button, label, input, select');
-
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
-            setTimeout(() => { cursorRing.style.left = e.clientX + 'px'; cursorRing.style.top = e.clientY + 'px'; }, 60);
-        });
-
-        // Hover effect for links and buttons
-        interactives.forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                cursor.style.transform = 'translate(-50%, -50%) scale(0)';
-                cursorRing.style.transform = 'translate(-50%, -50%) scale(1.8)';
-                cursorRing.style.borderColor = 'var(--text-main)';
-                cursorRing.style.background = 'rgba(255,255,255,0.1)';
-            });
-            el.addEventListener('mouseleave', () => {
-                cursor.style.transform = 'translate(-50%, -50%) scale(1)';
-                cursorRing.style.transform = 'translate(-50%, -50%) scale(1)';
-                cursorRing.style.borderColor = 'rgba(0, 212, 255, 0.5)';
-                cursorRing.style.background = 'transparent';
-            });
-        });
-
-        // 3. FIX FOR CURSOR CAMOUFLAGE ON THE BRIGHT STRAP
+        // Global Elements
         const marqueeBox = document.getElementById('marquee');
-        marqueeBox.addEventListener('mouseenter', () => {
-            cursor.style.background = 'var(--bg-deep)'; // Turns black
-            cursorRing.style.borderColor = 'var(--bg-deep)'; // Turns black
-        });
-        marqueeBox.addEventListener('mouseleave', () => {
-            cursor.style.background = 'var(--accent)'; // Reverts to cyan
-            cursorRing.style.borderColor = 'rgba(0, 212, 255, 0.5)'; // Reverts to cyan
-        });
 
-        // 4. 3D Parallax for Hero
-        const title3D = document.getElementById('title-3d');
-        const photoContainer = document.getElementById('photo-container');
+        // --- CHECK FOR DESKTOP (Has a mouse) ---
+        const isDesktop = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-        document.addEventListener('mousemove', (e) => {
-            let xAxis = (window.innerWidth / 2 - e.pageX) / 30;
-            let yAxis = (window.innerHeight / 2 - e.pageY) / 30;
-            title3D.style.transform = `rotateY(${-xAxis}deg) rotateX(${-yAxis}deg) translateZ(80px)`;
-            photoContainer.style.transform = `rotateY(${xAxis * 1.5}deg) rotateX(${yAxis * 1.5}deg) translateZ(100px)`;
-        });
+        if (isDesktop) {
+            // 2. Custom Cursor Base (DESKTOP ONLY)
+            const cursor = document.getElementById('cursor');
+            const cursorRing = document.getElementById('cursor-ring');
+            const interactives = document.querySelectorAll('.interactive, a, button, label, input, select');
 
-        // 5. Scrolling 3D Effect for Strap
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
+                setTimeout(() => { cursorRing.style.left = e.clientX + 'px'; cursorRing.style.top = e.clientY + 'px'; }, 60);
+            });
+
+            // Hover effect for links and buttons
+            interactives.forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursor.style.transform = 'translate(-50%, -50%) scale(0)';
+                    cursorRing.style.transform = 'translate(-50%, -50%) scale(1.8)';
+                    cursorRing.style.borderColor = 'var(--text-main)';
+                    cursorRing.style.background = 'rgba(255,255,255,0.1)';
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+                    cursorRing.style.transform = 'translate(-50%, -50%) scale(1)';
+                    cursorRing.style.borderColor = 'rgba(0, 212, 255, 0.5)';
+                    cursorRing.style.background = 'transparent';
+                });
+            });
+
+            // 3. FIX FOR CURSOR CAMOUFLAGE (DESKTOP ONLY)
+            marqueeBox.addEventListener('mouseenter', () => {
+                cursor.style.background = 'var(--bg-deep)'; 
+                cursorRing.style.borderColor = 'var(--bg-deep)'; 
+            });
+            marqueeBox.addEventListener('mouseleave', () => {
+                cursor.style.background = 'var(--accent)'; 
+                cursorRing.style.borderColor = 'rgba(0, 212, 255, 0.5)'; 
+            });
+
+            // 4. 3D Parallax for Hero (DESKTOP ONLY)
+            const title3D = document.getElementById('title-3d');
+            const photoContainer = document.getElementById('photo-container');
+
+            document.addEventListener('mousemove', (e) => {
+                let xAxis = (window.innerWidth / 2 - e.pageX) / 30;
+                let yAxis = (window.innerHeight / 2 - e.pageY) / 30;
+                title3D.style.transform = `rotateY(${-xAxis}deg) rotateX(${-yAxis}deg) translateZ(80px)`;
+                photoContainer.style.transform = `rotateY(${xAxis * 1.5}deg) rotateX(${yAxis * 1.5}deg) translateZ(100px)`;
+            });
+
+            // 6. 3D Tilt Effect for cards (DESKTOP ONLY)
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left; 
+                    const y = e.clientY - rect.top;  
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    const rotateX = ((y - centerY) / centerY) * -10; 
+                    const rotateY = ((x - centerX) / centerX) * 10;
+
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+                    card.style.boxShadow = `${-rotateY}px ${rotateX}px 40px rgba(0,0,0,0.6)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+                    card.style.boxShadow = `none`;
+                });
+            });
+        }
+
+        // 5. Scrolling 3D Effect for Strap (OPTIMIZED FOR ALL DEVICES)
+        let isScrolling = false;
+        
         window.addEventListener('scroll', () => {
-            let scrollVal = window.scrollY;
-            marqueeBox.style.transform = `rotate(-3deg) scale(1.1) skewX(${scrollVal * 0.02}deg) translateZ(${scrollVal * 0.1}px)`;
-        });
-
-        // 6. 3D Tilt Effect for all cards (including the new YouTube Video Cards)
-        const tiltCards = document.querySelectorAll('.tilt-card');
-        tiltCards.forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left; 
-                const y = e.clientY - rect.top;  
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                const rotateX = ((y - centerY) / centerY) * -10; // Slightly reduced for smooth iframe interaction
-                const rotateY = ((x - centerX) / centerX) * 10;
-
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
-                card.style.boxShadow = `${-rotateY}px ${rotateX}px 40px rgba(0,0,0,0.6)`;
-            });
-
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-                card.style.boxShadow = `none`;
-            });
+            if (!isScrolling) {
+                window.requestAnimationFrame(() => {
+                    let scrollVal = window.scrollY;
+                    // Reduce the intensity of the scroll translation on mobile
+                    let multiplier = window.innerWidth < 768 ? 0.05 : 0.1; 
+                    marqueeBox.style.transform = `rotate(-3deg) scale(1.1) skewX(${scrollVal * 0.02}deg) translateZ(${scrollVal * multiplier}px)`;
+                    isScrolling = false;
+                });
+                isScrolling = true;
+            }
         });
 
         // 7. Scroll Reveal Engine
